@@ -12,15 +12,13 @@ let local_pool_config = {
   max: 50,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
+  ssl: { rejectUnauthorized: false } 
 };
 
 const pool_config = process.env.DATABASE_URL
   ? {
       connectionString: process.env.DATABASE_URL,
-      ssl: {
-        require: true,         
-        rejectUnauthorized: false 
-      }
+      ssl: { rejectUnauthorized: false } 
     }
   : local_pool_config;
 

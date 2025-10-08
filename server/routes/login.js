@@ -25,6 +25,7 @@ router.post('/signup', function(req, res) {
 });
 
 router.post('/signin', function(req, res) {
+    console.log(1111);
     if (!req.body.login || !req.body.password) {
         res.status(400).json({ msg: 'Porfavor introduzca el Usuario y Contraseña' })
     } else {
