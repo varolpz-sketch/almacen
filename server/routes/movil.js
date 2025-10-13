@@ -199,7 +199,19 @@ router.post('/addVenta',[verificaToken], function (req, res) {
                 message: err.message,
             })
         }
-        console.log(result.rows[0]);
+        return res.status(200).send(result.rows[0])
+    })
+});
+
+router.put('/updateVenta/:id',[verificaToken], function (req, res) {
+    const text = `select * from modificar_datos(${req.params.id},'${req.body.logb}')`;
+    pool.query(text, (err, result) => {
+        if (err) {
+            return res.status(400).json({
+                ok: false,
+                message: err.message,
+            })
+        }
         return res.status(200).send(result.rows[0])
     })
 });
@@ -221,7 +233,6 @@ router.get('/listVenta/:dia/:mes/:gestion',[verificaToken], function (req, res) 
 
 /* IMAGEN */
 router.get('/verImagen/:nombre', (req, res)=>{ 
-    console.log(req.params.nombre);
     if(fs.existsSync(path.join(__dirname, '../documentos', `${req.params.nombre}.jpg`))) {
       res.sendFile(path.join(__dirname, '../documentos', `${req.params.nombre}.jpg`));
     } else {
