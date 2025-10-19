@@ -148,7 +148,9 @@ router.get('/listProducto/:id',[verificaToken], function (req, res) {
 
 router.get('/listProductoId/:categoria',[verificaToken], function (req, res) {
     const text = `select id_producto,categoria,marca,producto,unidad,contenido,precio::float,stock,minimo from tbl_producto 
-        where activo=true and categoria='${req.params.categoria}' order by producto`;
+        where activo=true and case when '0'='${req.params.categoria}' then categoria ilike '%%' else categoria='${req.params.categoria}' end 
+		order by categoria,producto`;
+    console.log(text);
     pool.query(text, (err, result) => {
         if (err) {
             return res.status(400).json({
@@ -176,6 +178,22 @@ router.get('/listBajoStock',[verificaToken], function (req, res) {
 });
 
 /* COMPRA */
+router.get('/listCompra/:fecha',[verificaToken], function (req, res) {
+    const text = `select id_compra,tb.id_producto,cantidad,tb.precio,precio_sugerido,vencimiento,tb.usucre,producto from tbl_compra tb
+    join tbl_producto tp on tp.id_producto=tb.id_producto
+    where tb.activo=true --and feccre::date='${req.params.fecha}'::date`;
+    console.log(text);
+    pool.query(text, (err, result) => {
+        if (err) {
+            return res.status(400).json({
+                ok: false,
+                message: err.message,
+            })
+        }
+        return res.status(200).send(result.rows)
+    })
+});
+
 router.post('/addCompra',[verificaToken], function (req, res) {
     const text = `select * from guardar_compra(${req.body.idProducto},${req.body.cantidad},${req.body.precio},${req.body.precioSugerido},'${req.body.fecha}','${req.body.logb}')`;
     pool.query(text, (err, result) => {
@@ -217,9 +235,9 @@ router.put('/updateVenta/:id',[verificaToken], function (req, res) {
 });
 
 router.get('/listVenta/:dia/:mes/:gestion',[verificaToken], function (req, res) {
-    const text = `select id_venta,total::float,descripcion,descuento::float,tipo::text,feccre::date::text as fecha from tbl_venta 
+    const text = `select id_venta,total::float,descripcion,descuento::float,tipo::text,feccre::date::text as fecha,usucre from tbl_venta 
         where activo=true and usucre='${req.body.logb}' and feccre::date::text='${req.params.gestion}-${req.params.mes}-${req.params.dia}'::text`;
-
+    console.log(text);
     pool.query(text, (err, result) => {
         if (err) {
             return res.status(400).json({
