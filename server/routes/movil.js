@@ -98,7 +98,7 @@ router.get('/listCategoria',[verificaToken], function (req, res) {
 router.post('/addProducto',[verificaToken], function (req, res) {
     const text = `INSERT INTO tbl_producto(categoria, marca, producto, unidad, contenido, precio, activo, usucre)
         VALUES ('${req.body.categoria}', '${req.body.marca}', '${req.body.producto}', '${req.body.unidad}', ${req.body.contenido}, 
-            ${req.body.precio}, true, '${req.body.logb}') RETURNING *`;
+            ${req.body.precio}, true, '${req.body.logb}') RETURNING id_producto`;
     pool.query(text, (err, result) => {
         if (err) {
             return res.status(400).json({
@@ -146,11 +146,12 @@ router.get('/listProducto/:id',[verificaToken], function (req, res) {
     })
 });
 
+
+//solo movil//
 router.get('/listProductoId/:categoria',[verificaToken], function (req, res) {
     const text = `select id_producto,categoria,marca,producto,unidad,contenido,precio::float,stock,minimo from tbl_producto 
-        where activo=true and case when '0'='${req.params.categoria}' then categoria ilike '%%' else categoria='${req.params.categoria}' end 
+        where activo=true and categoria='${req.params.categoria}' 
 		order by categoria,producto`;
-    console.log(text);
     pool.query(text, (err, result) => {
         if (err) {
             return res.status(400).json({
@@ -182,7 +183,6 @@ router.get('/listCompra/:fecha',[verificaToken], function (req, res) {
     const text = `select id_compra,tb.id_producto,cantidad,tb.precio,precio_sugerido,vencimiento,tb.usucre,producto from tbl_compra tb
     join tbl_producto tp on tp.id_producto=tb.id_producto
     where tb.activo=true --and feccre::date='${req.params.fecha}'::date`;
-    console.log(text);
     pool.query(text, (err, result) => {
         if (err) {
             return res.status(400).json({
@@ -221,8 +221,8 @@ router.post('/addVenta',[verificaToken], function (req, res) {
     })
 });
 
-router.put('/updateVenta/:id',[verificaToken], function (req, res) {
-    const text = `select * from modificar_datos(${req.params.id},'${req.body.logb}')`;
+router.put('/updateVenta',[verificaToken], function (req, res) {
+    const text = `select * from modificar_datos(${req.body.idVenta},${req.body.total},'${JSON.stringify(req.body.descripcion)}',${req.body.descuento},'${req.body.tipo}','${req.body.logb}')`;
     pool.query(text, (err, result) => {
         if (err) {
             return res.status(400).json({
@@ -236,8 +236,8 @@ router.put('/updateVenta/:id',[verificaToken], function (req, res) {
 
 router.get('/listVenta/:dia/:mes/:gestion',[verificaToken], function (req, res) {
     const text = `select id_venta,total::float,descripcion,descuento::float,tipo::text,feccre::date::text as fecha,usucre from tbl_venta 
-        where activo=true and usucre='${req.body.logb}' and feccre::date::text='${req.params.gestion}-${req.params.mes}-${req.params.dia}'::text`;
-    console.log(text);
+        where activo=true and usucre='${req.body.logb}' and feccre::date::text='${req.params.gestion}-${req.params.mes}-${req.params.dia}'::text
+        order by id_venta`;
     pool.query(text, (err, result) => {
         if (err) {
             return res.status(400).json({
@@ -246,6 +246,34 @@ router.get('/listVenta/:dia/:mes/:gestion',[verificaToken], function (req, res) 
             })
         }
         return res.status(200).send(result.rows)
+    })
+});
+
+/* DESCRIPCION */
+router.post('/addDescripcion',[verificaToken], function (req, res) {
+    const text = `INSERT INTO tbl_devolucion(id_venta, id_producto, producto, precio, unitario, cantidad, activo, usucre)
+	VALUES (${req.body.idVenta},${req.body.idProducto},'${req.body.producto}',${req.body.precio},${req.body.unitario},${req.body.cantidad},true,'${req.body.logb}')`;
+    pool.query(text, (err, result) => {
+        if (err) {
+            return res.status(400).json({
+                ok: false,
+                message: err.message,
+            })
+        }
+        const text1 = `UPDATE tbl_producto SET 
+	        stock=stock+${req.body.cantidad}, 
+	        usucre='${req.body.logb}', 
+	        fecmod=now()
+        WHERE id_producto=${req.body.idProducto}`;
+        pool.query(text1, (err1, result1) => {
+            if (err1) {
+                return res.status(400).json({
+                    ok: false,
+                    message: err.message,
+                })
+            }
+            return res.status(200).send('ok')
+        })
     })
 });
 
