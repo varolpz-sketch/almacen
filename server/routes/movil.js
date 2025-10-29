@@ -133,8 +133,31 @@ router.put('/updateProducto',[verificaToken], function (req, res) {
 });
 
 router.get('/listProducto/:id',[verificaToken], function (req, res) {
-    const text = `select id_producto,categoria,marca,producto,unidad,contenido,precio::float,stock,minimo from tbl_producto 
+    const text = `select id_producto,categoria,marca,producto,unidad,contenido,precio::float,stock,(
+        SELECT json_agg(json_build_object(
+        'idCompra', c.id_compra,
+        'lote', c.lote,
+        'vencimiento', c.vencimiento::date::text) ORDER BY c.lote ASC)
+        FROM tbl_compra c WHERE c.id_producto = tbl_producto.id_producto AND c.validar != 0
+        ) AS lote from tbl_producto 
         where activo=true and case when 0=${req.params.id} then id_producto::text ilike '%%' else id_producto=${req.params.id} end order by categoria,producto`;
+    pool.query(text, (err, result) => {
+        if (err) {
+            return res.status(400).json({
+                ok: false,
+                message: err.message,
+            })
+        }
+        return res.status(200).send(result.rows)
+    })
+});
+
+router.put('/deleteProducto/:id',[verificaToken], function (req, res) {
+    const text = `UPDATE tbl_producto
+        SET activo=false,
+        usumod='${req.body.logb}', 
+        fecmod=now()
+        WHERE id_producto=${req.params.id} RETURNING *`;
     pool.query(text, (err, result) => {
         if (err) {
             return res.status(400).json({
@@ -149,9 +172,15 @@ router.get('/listProducto/:id',[verificaToken], function (req, res) {
 
 //solo movil//
 router.get('/listProductoId/:categoria',[verificaToken], function (req, res) {
-    const text = `select id_producto,categoria,marca,producto,unidad,contenido,precio::float,stock,minimo from tbl_producto 
-        where activo=true and categoria='${req.params.categoria}' 
-		order by categoria,producto`;
+    const text = `select id_producto,categoria,marca,producto,unidad,contenido,precio::float,stock,(
+        SELECT json_agg(json_build_object(
+        'idCompra', c.id_compra,
+        'lote', c.lote,
+        'vencimiento', c.vencimiento::date::text) ORDER BY c.lote ASC)
+        FROM tbl_compra c WHERE c.id_producto = tbl_producto.id_producto AND c.validar != 0
+        ) AS lote from tbl_producto 
+        where activo=true and categoria='${req.params.categoria}'
+        order by categoria,producto`;
     pool.query(text, (err, result) => {
         if (err) {
             return res.status(400).json({
@@ -165,7 +194,7 @@ router.get('/listProductoId/:categoria',[verificaToken], function (req, res) {
 
 /* STOCK */
 router.get('/listBajoStock',[verificaToken], function (req, res) {
-    const text = `select id_producto,categoria,marca,producto,unidad,contenido,precio::float,stock,minimo from tbl_producto 
+    const text = `select id_producto,categoria,marca,producto,unidad,contenido,precio::float,stock from tbl_producto 
         where activo=true order by stock asc limit 10`;
     pool.query(text, (err, result) => {
         if (err) {
@@ -203,7 +232,7 @@ router.post('/addCompra',[verificaToken], function (req, res) {
                 message: err.message,
             })
         }
-        return res.status(200).send(result.rows)
+        return res.status(200).send(result.rows[0])
     })
 });
 
