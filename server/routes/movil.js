@@ -179,7 +179,7 @@ router.get('/listProductoId/:categoria',[verificaToken], function (req, res) {
         'vencimiento', c.vencimiento::date::text) ORDER BY c.lote ASC)
         FROM tbl_compra c WHERE c.id_producto = tbl_producto.id_producto AND c.validar != 0
         ) AS lote from tbl_producto 
-        where activo=true and categoria='${req.params.categoria}'
+        where activo=true and case when '0'='${req.params.categoria}' then categoria ilike '%%' else categoria='${req.params.categoria}' end
         order by categoria,producto`;
     pool.query(text, (err, result) => {
         if (err) {
