@@ -5,6 +5,7 @@ const { verificaToken } = require('../middlewares/autenticacion');
 const path = require('path');
 const fs = require('fs');
 const { pool } = require('../config/db');
+const bcrypt = require('bcryptjs');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -46,9 +47,35 @@ router.get('/unidades',[verificaToken], function (req, res) {
 });
 
 /* CATEGORIA */
+router.put('/actualizarCategoria',[verificaToken], function (req, res) {
+    const text = `UPDATE tbl_producto
+        SET categoria='${req.body.uno}', usumod='${req.body.logb}', fecmod=(SELECT now() AT TIME ZONE 'America/La_Paz')
+        WHERE id_producto = ANY(ARRAY[${req.body.idu}])`;
+    pool.query(text, (err, result) => {
+        if (err) {
+            return res.status(400).json({
+                ok: false,
+                message: err.message,
+            })
+        }
+        const text1 = `UPDATE tbl_producto
+            SET categoria='${req.body.dos}', usumod='${req.body.logb}', fecmod=(SELECT now() AT TIME ZONE 'America/La_Paz')
+            WHERE id_producto = ANY(ARRAY[${req.body.idd}])`;
+        pool.query(text1, (err, result) => {
+            if (err) {
+                return res.status(400).json({
+                    ok: false,
+                    message: err.message,
+                })
+            }
+            return res.status(200).json('ok')
+    })
+    })
+});
+
 router.post('/addCategoria',[verificaToken], function (req, res) {
     const text = `INSERT INTO tbl_categoria(categoria, descripcion, icono, activo, usucre)
-        VALUES ('${req.body.categoria}', '', ${req.body.icono}, true, '${req.body.logb}') RETURNING *`;
+        VALUES ('${req.body.categoria}', '', ${req.body.icono}, true, '${req.body.logb}')`;
     pool.query(text, (err, result) => {
         if (err) {
             return res.status(400).json({
@@ -80,7 +107,7 @@ router.put('/updateCategoria',[verificaToken], function (req, res) {
 
 router.get('/listCategoria',[verificaToken], function (req, res) {
     const text = `select id_categoria,tc.categoria,descripcion,icono,count(*) as articulo from tbl_categoria tc
-        join tbl_producto tp on tc.categoria=tp.categoria
+        left join tbl_producto tp on tc.categoria=tp.categoria
         group by id_categoria,tc.categoria,descripcion,icono
         order by tc.categoria`;
     pool.query(text, (err, result) => {
@@ -169,6 +196,19 @@ router.put('/deleteProducto/:id',[verificaToken], function (req, res) {
     })
 });
 
+//solo web//
+router.get('/productoCategoria/:categoria',[verificaToken], function (req, res) {
+    const text = `select id_producto,marca,producto from tbl_producto where activo=true and categoria='${req.params.categoria}' order by producto`;
+    pool.query(text, (err, result) => {
+        if (err) {
+            return res.status(400).json({
+                ok: false,
+                message: err.message,
+            })
+        }
+        return res.status(200).send(result.rows)
+    })
+});
 
 //solo movil//
 router.get('/listProductoId/:categoria',[verificaToken], function (req, res) {
@@ -207,11 +247,25 @@ router.get('/listBajoStock',[verificaToken], function (req, res) {
     })
 });
 
+/* DEVOLUCION */
+router.get('/listDevolucion/:fecha',[verificaToken], function (req, res) {
+    const text = `select id_venta,id_producto,producto,precio,unitario,cantidad,lote,usucre from tbl_devolucion where feccre::date='${req.params.fecha}'::date`;
+    pool.query(text, (err, result) => {
+        if (err) {
+            return res.status(400).json({
+                ok: false,
+                message: err.message,
+            })
+        }
+        return res.status(200).send(result.rows)
+    })
+});
+
 /* COMPRA */
 router.get('/listCompra/:fecha',[verificaToken], function (req, res) {
     const text = `select id_compra,tb.id_producto,cantidad,tb.precio,precio_sugerido,vencimiento,tb.usucre,producto from tbl_compra tb
     join tbl_producto tp on tp.id_producto=tb.id_producto
-    where tb.activo=true --and feccre::date='${req.params.fecha}'::date`;
+    where tb.activo=true and tb.feccre::date='${req.params.fecha}'::date`;
     pool.query(text, (err, result) => {
         if (err) {
             return res.status(400).json({
@@ -233,6 +287,82 @@ router.post('/addCompra',[verificaToken], function (req, res) {
             })
         }
         return res.status(200).send(result.rows[0])
+    })
+});
+
+/* USUARIO */
+router.get('/listUsuario',[verificaToken], function (req, res) {
+    const text = `select id_usuario,login,nombre,id_departamento as rol,case when id_departamento='0' then 'Administrador' else 'Vendedor' end tipo from tbl_usuario
+        where activo=true order by 1`;
+    pool.query(text, (err, result) => {
+        if (err) {
+            return res.status(400).json({
+                ok: false,
+                message: err.message,
+            })
+        }
+        return res.status(200).send(result.rows)
+    })
+});
+
+router.put('/updateUsuario',[verificaToken], function (req, res) {
+    const text = `UPDATE tbl_usuario
+	SET nombre='${req.body.nombre}', id_departamento=${req.body.rol}, usumod='${req.body.logb}', fecmod=(SELECT now() AT TIME ZONE 'America/La_Paz')
+	WHERE id_usuario=${req.body.id_usuario} returning *`;
+    pool.query(text, (err, result) => {
+        if (err) {
+            return res.status(400).json({
+                ok: false,
+                message: err.message,
+            })
+        }
+        return res.status(200).send(result.rows)
+    })
+});
+
+router.put('/updateEstado',[verificaToken], function (req, res) {
+    const text = `UPDATE tbl_usuario
+	SET  activo=false, usumod='${req.body.logb}', fecmod=(SELECT now() AT TIME ZONE 'America/La_Paz')
+	WHERE id_usuario=${req.body.id} returning *`;
+    pool.query(text, (err, result) => {
+        if (err) {
+            return res.status(400).json({
+                ok: false,
+                message: err.message,
+            })
+        }
+        return res.status(200).send(result.rows)
+    })
+});
+
+router.put('/updatePass',[verificaToken], function (req, res) {
+    const valor = bcrypt.hashSync(req.body.pass, 10);
+    const text = `UPDATE tbl_usuario
+	SET  password='${valor}',usumod='${req.body.logb}', fecmod=(SELECT now() AT TIME ZONE 'America/La_Paz')
+	WHERE id_usuario=${req.body.id} returning *`;
+    pool.query(text, (err, result) => {
+        if (err) {
+            return res.status(400).json({
+                ok: false,
+                message: err.message,
+            })
+        }
+        return res.status(200).send(result.rows)
+    })
+});
+
+router.post('/addUsuario',[verificaToken], function (req, res) {
+    const valor = bcrypt.hashSync('123456', 10);
+    const text = `INSERT INTO tbl_usuario(login, password, nombre, id_departamento, activo, usucre, feccre) 
+    VALUES ('${req.body.login}','${valor}','${req.body.nombre}',${req.body.rol},true,'${req.body.logb}',(SELECT now() AT TIME ZONE 'America/La_Paz')) returning *`;
+    pool.query(text, (err, result) => {
+        if (err) {
+            return res.status(400).json({
+                ok: false,
+                message: err.message,
+            })
+        }
+        return res.status(200).send(result.rows)
     })
 });
 
@@ -280,8 +410,7 @@ router.get('/listVenta/:dia/:mes/:gestion',[verificaToken], function (req, res) 
 
 /* DESCRIPCION */
 router.post('/addDescripcion',[verificaToken], function (req, res) {
-    const text = `INSERT INTO tbl_devolucion(id_venta, id_producto, producto, precio, unitario, cantidad, activo, usucre)
-	VALUES (${req.body.idVenta},${req.body.idProducto},'${req.body.producto}',${req.body.precio},${req.body.unitario},${req.body.cantidad},true,'${req.body.logb}')`;
+    const text = `select * from guardar_devolucion(${req.body.idVenta},${req.body.idProducto},'${req.body.producto}',${req.body.precio},${req.body.unitario},${req.body.cantidad},${req.body.lote},'${req.body.logb}')`;
     pool.query(text, (err, result) => {
         if (err) {
             return res.status(400).json({
@@ -289,20 +418,7 @@ router.post('/addDescripcion',[verificaToken], function (req, res) {
                 message: err.message,
             })
         }
-        const text1 = `UPDATE tbl_producto SET 
-	        stock=stock+${req.body.cantidad}, 
-	        usucre='${req.body.logb}', 
-	        fecmod=now()
-        WHERE id_producto=${req.body.idProducto}`;
-        pool.query(text1, (err1, result1) => {
-            if (err1) {
-                return res.status(400).json({
-                    ok: false,
-                    message: err.message,
-                })
-            }
-            return res.status(200).send('ok')
-        })
+        return res.status(200).send(result.rows)
     })
 });
 
@@ -315,7 +431,6 @@ router.get('/verImagen/:nombre', (req, res)=>{
     }
 });
 
-
 router.post('/uploadImagen/:idProducto', upload.single('imagen'), (req, res) => {
     const { idProducto } = req.params;  
     if (!req.file) {
@@ -326,6 +441,7 @@ router.post('/uploadImagen/:idProducto', upload.single('imagen'), (req, res) => 
       nombreArchivo: req.file.filename,
       idProducto: idProducto,
     });
-  });
+});
+
 
 module.exports = router;
