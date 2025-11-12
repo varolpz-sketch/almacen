@@ -262,6 +262,21 @@ router.get('/listDevolucion/:fecha',[verificaToken], function (req, res) {
 });
 
 /* COMPRA */
+router.get('/listCompraId/:id',[verificaToken], function (req, res) {
+    const text = `select lote,producto,tb.cantidad,tb.precio,tb.usucre from tbl_compra tb 
+        join tbl_producto tp on tp.id_producto=tb.id_producto where tb.id_compra=${req.params.id}`;
+    pool.query(text, (err, result) => {
+        if (err) {
+            return res.status(400).json({
+                ok: false,
+                message: err.message,
+            })
+        }
+        return res.status(200).send(result.rows)
+    })
+});
+
+
 router.get('/listCompra/:fecha',[verificaToken], function (req, res) {
     const text = `select id_compra,tb.id_producto,cantidad,tb.precio,precio_sugerido,vencimiento,tb.usucre,producto from tbl_compra tb
     join tbl_producto tp on tp.id_producto=tb.id_producto
@@ -397,6 +412,19 @@ router.get('/listVenta/:dia/:mes/:gestion',[verificaToken], function (req, res) 
     const text = `select id_venta,total::float,descripcion,descuento::float,tipo::text,feccre::date::text as fecha,usucre from tbl_venta 
         where activo=true and usucre='${req.body.logb}' and feccre::date::text='${req.params.gestion}-${req.params.mes}-${req.params.dia}'::text
         order by id_venta`;
+    pool.query(text, (err, result) => {
+        if (err) {
+            return res.status(400).json({
+                ok: false,
+                message: err.message,
+            })
+        }
+        return res.status(200).send(result.rows)
+    })
+});
+
+router.get('/listVentaId/:id',[verificaToken], function (req, res) {
+    const text = `select id_venta,total,descripcion,usucre from tbl_venta where id_venta=${req.params.id}`;
     pool.query(text, (err, result) => {
         if (err) {
             return res.status(400).json({
