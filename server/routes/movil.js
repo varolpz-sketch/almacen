@@ -408,9 +408,9 @@ router.put('/updateVenta',[verificaToken], function (req, res) {
     })
 });
 
-router.get('/listVenta/:dia/:mes/:gestion',[verificaToken], function (req, res) {
+router.get('/listVenta/:fecha',[verificaToken], function (req, res) {
     const text = `select id_venta,total::float,descripcion,descuento::float,tipo::text,feccre::date::text as fecha,usucre from tbl_venta 
-        where activo=true and usucre='${req.body.logb}' and feccre::date::text='${req.params.gestion}-${req.params.mes}-${req.params.dia}'::text
+        where activo=true and usucre='${req.body.logb}' and feccre::date='${req.params.fecha}'::date
         order by id_venta`;
     pool.query(text, (err, result) => {
         if (err) {
