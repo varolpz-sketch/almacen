@@ -7,6 +7,7 @@ const cors = require('cors');
 const indexRouter = require(path.join(__dirname, 'server/routes', 'index'));
 const loginRouter = require(path.join(__dirname, 'server/routes', 'login'));
 const movilRouter = require(path.join(__dirname, 'server/routes', 'movil'));
+const webRouter = require(path.join(__dirname, 'server/routes', 'web'));
 
 const app = express();
 let server = http.createServer(app);
@@ -23,6 +24,7 @@ app.use(cors({
 app.use('/', indexRouter);
 app.use('/login', loginRouter);
 app.use('/movil', movilRouter);
+app.use('/web', webRouter);
 
 server.prependListener("request", (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");

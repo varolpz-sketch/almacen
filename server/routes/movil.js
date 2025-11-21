@@ -249,7 +249,10 @@ router.get('/listBajoStock',[verificaToken], function (req, res) {
 
 /* DEVOLUCION */
 router.get('/listDevolucion/:fecha',[verificaToken], function (req, res) {
-    const text = `select id_venta,id_producto,producto,precio,unitario,cantidad,lote,usucre from tbl_devolucion where feccre::date='${req.params.fecha}'::date`;
+    const text = `select id_venta,id_producto,producto,precio,unitario,cantidad,lote,usucre from tbl_devolucion 
+        where feccre::date='${req.params.fecha}'::date
+        and case when '0'='${req.body.depb}' then usucre ilike '%%' else usucre='${req.body.logb}' end
+        order by id_venta,id_producto`;
     pool.query(text, (err, result) => {
         if (err) {
             return res.status(400).json({
@@ -280,7 +283,9 @@ router.get('/listCompraId/:id',[verificaToken], function (req, res) {
 router.get('/listCompra/:fecha',[verificaToken], function (req, res) {
     const text = `select id_compra,tb.id_producto,cantidad,tb.precio,precio_sugerido,vencimiento,tb.usucre,producto from tbl_compra tb
     join tbl_producto tp on tp.id_producto=tb.id_producto
-    where tb.activo=true and tb.feccre::date='${req.params.fecha}'::date`;
+    where tb.activo=true and tb.feccre::date='${req.params.fecha}'::date
+    and case when '0'='${req.body.depb}' then tb.usucre ilike '%%' else tb.usucre='${req.body.logb}' end
+    order by tb.id_compra`;
     pool.query(text, (err, result) => {
         if (err) {
             return res.status(400).json({
@@ -410,7 +415,8 @@ router.put('/updateVenta',[verificaToken], function (req, res) {
 
 router.get('/listVenta/:fecha',[verificaToken], function (req, res) {
     const text = `select id_venta,total::float,descripcion,descuento::float,tipo::text,feccre::date::text as fecha,usucre from tbl_venta 
-        where activo=true and usucre='${req.body.logb}' and feccre::date='${req.params.fecha}'::date
+        where activo=true and feccre::date='${req.params.fecha}'::date
+        and case when '0'='${req.body.depb}' then usucre ilike '%%' else usucre='${req.body.logb}' end
         order by id_venta`;
     pool.query(text, (err, result) => {
         if (err) {

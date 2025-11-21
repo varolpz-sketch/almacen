@@ -35,13 +35,11 @@ router.post('/signin', function(req, res) {
             if (!bcrypt.compareSync(req.body.password, result.rows[0].password)) {
                 return res.status(400).json({ msg: 'Contraseña no valido' })
             }
-
-	    let generador=result.rows[0];
+	        let generador=result.rows[0];
             delete generador.password;
             let token = jwt.sign({
                 usuario: generador
             }, process.env.SEED, { expiresIn: process.env.CADUCIDAD_TOKEN });
-        
             return res.status(200).json({
                 login: req.body.login,
                 usuario: generador,
